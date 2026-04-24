@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>오늘 뭐 입지?</title>
+  <meta name="theme-color" content="#7eaaf7" />
+  <style>
+    :root {
+      --bg: #f3f7ff;
+      --surface: rgba(255,255,255,0.95);
+      --surface-soft: #f8fbff;
+      --primary: #4f86ee;
+      --primary-soft: #eaf2ff;
+      --text: #162033;
+      --subtext: #69758a;
+      --line: #e3ebf7;
+      --shadow: 0 16px 40px rgba(76, 106, 160, 0.12);
+      --shadow-soft: 0 8px 22px rgba(78, 114, 178, 0.10);
+      --warm1: #ff4d4d;
+      --warm2: #ff944d;
+      --warm3: #ffc247;
+      --cool1: #d9ef62;
+      --cool2: #72d9d0;
+      --cool3: #4a97f4;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(180deg, #eef4ff 0%, #f9fbff 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
+    body { min-height: 100vh; }
+    .app {
+      width: min(430px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.55);
+    }
+    .pull-indicator {
+      height: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--subtext);
+      font-size: 13px;
+      transition: height .2s ease;
+      background: rgba(255,255,255,0.65);
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: calc(env(safe-area-inset-top) + 16px) 20px 14px;
+      background: linear-gradient(180deg, rgba(244,247,253,0.96) 65%, rgba(244,247,253,0));
+      backdrop-filter: blur(12px);
+    }
+    .topbar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .brand-emoji {
+      width: 46px;
+      height: 46px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, #ffffff 0%, #edf4ff 100%);
+      box-shadow: var(--shadow-soft);
+      font-size: 25px;
+      flex-shrink: 0;
+    }
+    .brand-title {
+      font-size: 31px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--primary);
+      line-height: 1.1;
+    }
+    .top-actions { display: flex; gap: 10px; flex-shrink: 0; }
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border: 1px solid rgba(229,236,246,0.9);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.92);
+      box-shadow: var(--shadow-soft);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .content { padding: 0 16px calc(96px + env(safe-area-inset-bottom)); }
+    .page { display: none; }
+    .page.active { display: block; }
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(229,236,246,0.95);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+    .status {
+      padding: 14px;
+      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid #e6eef9;
+      box-shadow: var(--shadow-soft);
+      color: var(--subtext);
+      line-height: 1.5;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .weather-card {
+      padding: 18px;
+      background: linear-gradient(180deg, #eff5ff 0%, #e2edff 100%);
+      display: grid;
+      grid-template-columns: 108px 1fr;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .cloud-bubble {
+      width: 108px;
+      height: 108px;
+      border-radius: 30px;
+      background: linear-gradient(180deg, #ffffff 0%, #e7efff 100%);
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), var(--shadow-soft);
+      font-size: 56px;
+    }
+    .location-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .temp-line {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .temp-main {
+      font-size: 50px;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+    .temp-sub {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary);
+      line-height: 1.4;
+    }
+    .meta-line {
+      color: var(--subtext);
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 800;
+      margin: 16px 4px 12px;
+    }
+    .section-title .bubble {
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 18px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+    }
+    .recommend-card { padding: 18px 16px 16px; margin-bottom: 20px; }
+    .recommend-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: #edf4ff;
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .recommend-title {
+      text-align: center;
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 19px;
+      margin-bottom: 18px;
+      letter-spacing: -0.03em;
+      line-height: 1.4;
+    }
+    .outfit-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .outfit-item, .accessory-item, .legend-chip {
+      border-radius: 24px;
+      background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+      border: 1px solid #edf2fb;
+      text-align: center;
+      padding: 14px 8px 12px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 20px rgba(100,125,168,0.08);
+    }
+    .outfit-emoji, .accessory-emoji {
+      width: 84px;
+      height: 84px;
+      margin: 0 auto 8px;
+      border-radius: 28px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, #ffffff 0%, #eaf0ff 100%);
+      box-shadow: 0 12px 24px rgba(97,124,175,0.18), inset 0 1px 0 rgba(255,255,255,0.95);
+      font-size: 42px;
+    }
+    .accessories {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin: 8px 0 14px;
+    }
+    .accessory-emoji { width: 72px; height: 72px; font-size: 36px; }
+    .item-name {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.35;
+      word-break: keep-all;
+    }
+    .advice {
+      background: #edf4ff;
+      border: 1px solid #deebff;
+      border-radius: 20px;
+      padding: 12px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      color: #2f4e86;
+      font-weight: 700;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+    .advice-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: white;
+      flex-shrink: 0;
+      box-shadow: 0 6px 14px rgba(115,144,198,0.16);
+    }
+    .weekly-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 12px 4px 12px;
+    }
+    .link-btn {
+      border: 0;
+      background: transparent;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .week-scroller {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      scrollbar-width: none;
+    }
+    .week-scroller::-webkit-scrollbar { display: none; }
+    .day-card {
+      min-width: 96px;
+      padding: 14px 10px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e6eef9;
+      box-shadow: var(--shadow-soft);
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .day-card.today {
+      border-color: #8ab0ff;
+      box-shadow: 0 0 0 2px rgba(79, 134, 238, 0.12), var(--shadow-soft);
+    }
+    .day-name { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
+    .day-icon { font-size: 30px; margin-bottom: 6px; }
+    .day-temp { font-size: 20px; font-weight: 800; letter-spacing: -0.04em; }
+    .day-sub { font-size: 13px; color: var(--subtext); margin-top: 4px; line-height: 1.3; }
+    .weekly-list { display: grid; gap: 10px; }
+    .weekly-row {
+      display: grid;
+      grid-template-columns: 72px 48px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e6eef9;
+      box-shadow: var(--shadow-soft);
+    }
+    .weekly-row .row-name { font-weight: 800; }
+    .weekly-row .row-icon { font-size: 30px; text-align: center; }
+    .weekly-row .row-desc { color: var(--subtext); font-size: 14px; line-height: 1.35; }
+    .weekly-row .row-temp { font-size: 16px; font-weight: 800; text-align: right; }
+    .panel-card { padding: 16px; }
+    .criteria-note {
+      background: #f8fbff;
+      border: 1px solid #e6eef9;
+      border-radius: 20px;
+      padding: 14px;
+      color: var(--subtext);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .legend-wrap {
+      display: grid;
+      grid-template-columns: 14px 1fr;
+      gap: 12px;
+    }
+    .legend-bar {
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--warm1) 0%, var(--warm2) 18%, var(--warm3) 38%, var(--cool1) 60%, var(--cool2) 80%, var(--cool3) 100%);
+      min-height: 100%;
+    }
+    .legend-list { display: grid; gap: 10px; }
+    .legend-chip {
+      text-align: left;
+      padding: 14px;
+    }
+    .legend-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .legend-temp { font-size: 18px; font-weight: 900; letter-spacing: -0.04em; }
+    .legend-tone { font-size: 12px; font-weight: 800; color: var(--primary); background: #edf4ff; border-radius: 999px; padding: 6px 10px; }
+    .legend-desc { font-size: 14px; color: var(--subtext); line-height: 1.5; }
+    .setting-group { display: grid; gap: 10px; }
+    .radio-tile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #e1e9f6;
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+      cursor: pointer;
+    }
+    .radio-tile input { accent-color: var(--primary); transform: scale(1.1); }
+    .radio-title { font-size: 15px; font-weight: 800; }
+    .radio-desc { font-size: 13px; color: var(--subtext); margin-top: 3px; }
+    .mini-note {
+      color: var(--subtext);
+      font-size: 13px;
+      line-height: 1.55;
+      margin-top: 12px;
+    }
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: min(430px, 100%);
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid rgba(229,236,246,0.95);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      z-index: 30;
+    }
+    .nav-btn {
+      border: 0;
+      background: transparent;
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      padding: 6px 4px;
+      color: #7e8797;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .nav-btn .nav-icon { font-size: 23px; }
+    .nav-btn.active { color: var(--primary); }
+    @media (max-width: 380px) {
+      .brand-title { font-size: 28px; }
+      .weather-card { grid-template-columns: 92px 1fr; }
+      .cloud-bubble { width: 92px; height: 92px; font-size: 48px; }
+      .temp-main { font-size: 44px; }
+      .outfit-emoji { width: 74px; height: 74px; font-size: 38px; }
+      .weekly-row { grid-template-columns: 58px 42px 1fr auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="pull-indicator" id="pullIndicator">아래로 당겨 새로고침</div>
+
+    <header class="topbar">
+      <div class="topbar-row">
+        <div class="brand">
+          <div class="brand-emoji">🌤️</div>
+          <div class="brand-title">오늘 뭐 입지?</div>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" id="refreshBtn" aria-label="새로고침">↻</button>
+          <button class="icon-btn" aria-label="알림">🔔</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="content" id="scrollArea">
+      <section class="page active" id="page-today">
+        <div class="status" id="statusBox">현재 위치 날씨를 불러오는 중이에요…</div>
+
+        <section class="weather-card card">
+          <div class="cloud-bubble" id="currentWeatherIcon">☁️</div>
+          <div>
+            <div class="location-line"><span>📍</span> <span id="locationName">서울</span></div>
+            <div class="temp-line">
+              <div class="temp-main" id="currentTemp">12°</div>
+              <div class="temp-sub" id="tempSummary">최고 23° · 최저 12°<br>체감 12°</div>
+            </div>
+            <div class="meta-line" id="currentMeta">흐림 · 바람 약간</div>
+          </div>
+        </section>
+
+        <div class="section-title"><span class="bubble">👕</span> 오늘의 추천</div>
+        <section class="recommend-card card">
+          <div class="recommend-badge">📌 업로드한 기온별 옷차림표 기준</div>
+          <div class="recommend-title" id="recommendHeadline">반팔 + 얇은 셔츠 + 면바지</div>
+
+          <div class="outfit-grid" id="outfitGrid"></div>
+          <div class="accessories" id="accessoriesGrid"></div>
+
+          <div class="advice">
+            <div class="advice-icon">💙</div>
+            <div id="adviceText">낮에는 가볍게, 아침저녁에는 얇은 겉옷 하나면 좋아요.</div>
+          </div>
+        </section>
+
+        <div class="weekly-head">
+          <div class="section-title" style="margin:0;"><span class="bubble">🗓️</span> 주간 날씨</div>
+          <button class="link-btn" data-go-tab="weekly">더보기 &gt;</button>
+        </div>
+        <div class="week-scroller" id="weekScroller"></div>
+      </section>
+
+      <section class="page" id="page-weekly">
+        <div class="section-title"><span class="bubble">📆</span> 주간 옷차림</div>
+        <div class="weekly-list" id="weeklyList"></div>
+        <p class="mini-note">옷 추천은 업로드한 “기온별 옷차림” 이미지를 바탕으로 평균적인 기준으로 재구성했습니다.</p>
+      </section>
+
+      <section class="page" id="page-criteria">
+        <div class="section-title"><span class="bubble">🌡️</span> 기온별 기준표</div>
+        <div class="panel-card card">
+          <div class="criteria-note">
+            보내주신 기온별 옷차림 이미지를 기준으로, 앱에서 보기 쉽게 정리한 평균적인 추천표예요. 실제 추천은 <b>오늘 최고기온</b>을 중심으로 하고, <b>최저기온·비·바람</b>으로 보정합니다.
+          </div>
+          <div class="legend-wrap">
+            <div class="legend-bar"></div>
+            <div class="legend-list" id="criteriaList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-settings">
+        <div class="section-title"><span class="bubble">⚙️</span> 설정</div>
+        <div class="panel-card card">
+          <div style="font-size:16px; font-weight:800; margin-bottom:12px;">체감 성향</div>
+          <div class="setting-group" id="sensitivityGroup">
+            <label class="radio-tile">
+              <input type="radio" name="sensitivity" value="cold" />
+              <div>
+                <div class="radio-title">추위를 많이 타요</div>
+                <div class="radio-desc">조금 더 따뜻하게 추천해요.</div>
+              </div>
+            </label>
+            <label class="radio-tile">
+              <input type="radio" name="sensitivity" value="normal" checked />
+              <div>
+                <div class="radio-title">보통이에요</div>
+                <div class="radio-desc">기본 기준으로 추천해요.</div>
+              </div>
+            </label>
+            <label class="radio-tile">
+              <input type="radio" name="sensitivity" value="heat" />
+              <div>
+                <div class="radio-title">더위를 많이 타요</div>
+                <div class="radio-desc">조금 더 가볍게 추천해요.</div>
+              </div>
+            </label>
+          </div>
+          <div class="mini-note">옷 등록 기능은 제외했고, 평균적인 옷차림 기준으로만 추천하도록 바꿨어요.</div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="today"><span class="nav-icon">👗</span><span>오늘 추천</span></button>
+      <button class="nav-btn" data-tab="weekly"><span class="nav-icon">📅</span><span>주간</span></button>
+      <button class="nav-btn" data-tab="criteria"><span class="nav-icon">🌡️</span><span>기준표</span></button>
+      <button class="nav-btn" data-tab="settings"><span class="nav-icon">⚙️</span><span>설정</span></button>
+    </nav>
+  </div>
+
+  <script>
+    const state = {
+      weather: null,
+      locationName: '서울',
+      sensitivity: localStorage.getItem('owi-sensitivity') || 'normal'
+    };
+
+    const temperatureCriteria = [
+      { range: '27°C~', tone: '한여름', min: 27, max: 100, items: ['나시', '반바지', '민소매 원피스'], accessories: ['선글라스', '물병'], note: '아주 더운 날씨예요. 최대한 시원하고 통풍 잘 되는 옷이 좋아요.' },
+      { range: '23°C~26°C', tone: '초여름', min: 23, max: 26.99, items: ['반팔', '얇은 셔츠', '얇은 긴바지'], accessories: ['가벼운 겉옷', '선글라스'], note: '낮에는 꽤 따뜻해요. 반팔 위주로 입고 실내 냉방용 얇은 겉옷만 챙기면 돼요.' },
+      { range: '20°C~22°C', tone: '가벼움', min: 20, max: 22.99, items: ['긴팔티', '가디건', '면바지'], accessories: ['얇은 셔츠', '스니커즈'], note: '딱 활동하기 좋은 날씨예요. 너무 두껍지 않게 입는 게 좋아요.' },
+      { range: '17°C~19°C', tone: '선선함', min: 17, max: 19.99, items: ['니트', '가디건', '청바지'], accessories: ['맨투맨', '얇은 자켓'], note: '선선한 편이에요. 가벼운 니트나 가디건이 잘 맞아요.' },
+      { range: '12°C~16°C', tone: '간절기', min: 12, max: 16.99, items: ['자켓', '셔츠', '가디건'], accessories: ['슬랙스', '얇은 코트'], note: '간절기 느낌이에요. 자켓이나 셔츠를 걸치기 좋아요.' },
+      { range: '10°C~11°C', tone: '쌀쌀함', min: 10, max: 11.99, items: ['트렌치코트', '간절기 야상', '니트'], accessories: ['레이어드', '스카프'], note: '제법 쌀쌀해요. 코트류나 레이어드가 잘 어울려요.' },
+      { range: '6°C~9°C', tone: '추움', min: 6, max: 9.99, items: ['코트', '가죽자켓', '니트'], accessories: ['목도리', '기모바지'], note: '춥게 느껴질 수 있어요. 도톰한 외투를 추천해요.' },
+      { range: '~5°C', tone: '한겨울', min: -100, max: 5.99, items: ['패딩', '두꺼운 코트', '기모바지'], accessories: ['목도리', '장갑'], note: '겨울 옷이 필요한 날씨예요. 방한 위주로 준비해 주세요.' }
+    ];
+
+    const pageEls = {
+      today: document.getElementById('page-today'),
+      weekly: document.getElementById('page-weekly'),
+      criteria: document.getElementById('page-criteria'),
+      settings: document.getElementById('page-settings')
+    };
+    const navBtns = [...document.querySelectorAll('.nav-btn')];
+    const goTabBtns = [...document.querySelectorAll('[data-go-tab]')];
+
+    function setTab(tab) {
+      Object.entries(pageEls).forEach(([key, el]) => el.classList.toggle('active', key === tab));
+      navBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    navBtns.forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.tab)));
+    goTabBtns.forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.goTab)));
+
+    function status(message) {
+      document.getElementById('statusBox').textContent = message;
+    }
+
+    function weatherCodeMeta(code, isDay = 1) {
+      if (code === 0) return { label: '맑음', emoji: isDay ? '☀️' : '🌙' };
+      if ([1,2,3].includes(code)) return { label: code === 1 ? '구름 조금' : code === 2 ? '구름 많음' : '흐림', emoji: '☁️' };
+      if ([45,48].includes(code)) return { label: '안개', emoji: '🌫️' };
+      if ([51,53,55,56,57].includes(code)) return { label: '이슬비', emoji: '🌦️' };
+      if ([61,63,65,66,67,80,81,82].includes(code)) return { label: '비', emoji: '🌧️' };
+      if ([71,73,75,77,85,86].includes(code)) return { label: '눈', emoji: '❄️' };
+      if ([95,96,99].includes(code)) return { label: '뇌우', emoji: '⛈️' };
+      return { label: '흐림', emoji: '☁️' };
+    }
+
+    function getSensitivityOffset() {
+      if (state.sensitivity === 'cold') return -1.5;
+      if (state.sensitivity === 'heat') return 1.5;
+      return 0;
+    }
+
+    function getCriterionByTemp(maxTemp) {
+      const adjusted = maxTemp + getSensitivityOffset();
+      return temperatureCriteria.find(item => adjusted >= item.min && adjusted <= item.max) || temperatureCriteria[0];
+    }
+
+    function buildRecommendation(current, daily) {
+      const maxTemp = daily.temperature_2m_max[0];
+      const minTemp = daily.temperature_2m_min[0];
+      const criterion = getCriterionByTemp(maxTemp);
+      const precip = daily.precipitation_probability_max[0] || 0;
+      const wind = current.wind_speed_10m || 0;
+      let accessories = [...criterion.accessories];
+      let note = criterion.note;
+
+      if (minTemp <= 14 && maxTemp >= 22) {
+        note = '낮에는 가볍게 입고, 아침저녁에는 얇은 겉옷을 챙기면 좋아요.';
+        if (!accessories.includes('얇은 겉옷')) accessories[0] = '얇은 겉옷';
+      }
+      if (precip >= 40) {
+        if (!accessories.includes('우산')) accessories[1] = '우산';
+        note = '비 가능성이 있어요. 기본 추천에 우산까지 챙기는 걸 추천해요.';
+      }
+      if (wind >= 18) {
+        note += ' 바람이 있어 체감은 조금 더 서늘할 수 있어요.';
+      }
+
+      return {
+        headline: criterion.items.join(' + '),
+        items: criterion.items,
+        accessories,
+        note,
+        maxTemp,
+        minTemp,
+        feelsLike: current.apparent_temperature
+      };
+    }
+
+    function emojiForItem(name) {
+      const map = {
+        '나시':'👚', '반팔':'👕', '민소매 원피스':'👗', '얇은 셔츠':'👔', '얇은 긴바지':'👖',
+        '긴팔티':'👚', '가디건':'🧥', '면바지':'👖', '얇은 셔츠':'👔', '스니커즈':'👟',
+        '니트':'🧶', '청바지':'👖', '맨투맨':'👕', '얇은 자켓':'🧥', '자켓':'🧥', '셔츠':'👔',
+        '슬랙스':'👖', '얇은 코트':'🧥', '트렌치코트':'🧥', '간절기 야상':'🧥', '레이어드':'🪄',
+        '스카프':'🧣', '코트':'🧥', '가죽자켓':'🧥', '목도리':'🧣', '기모바지':'👖',
+        '패딩':'🧥', '두꺼운 코트':'🧥', '장갑':'🧤', '선글라스':'🕶️', '물병':'🧴',
+        '가벼운 겉옷':'🧥', '얇은 겉옷':'🧥', '우산':'☂️'
+      };
+      return map[name] || '✨';
+    }
+
+    function renderOutfit(rec) {
+      document.getElementById('recommendHeadline').textContent = rec.headline;
+      document.getElementById('adviceText').textContent = rec.note;
+      const outfitGrid = document.getElementById('outfitGrid');
+      const accessoriesGrid = document.getElementById('accessoriesGrid');
+
+      outfitGrid.innerHTML = rec.items.map(item => `
+        <div class="outfit-item">
+          <div class="outfit-emoji">${emojiForItem(item)}</div>
+          <div class="item-name">${item}</div>
+        </div>
+      `).join('');
+      accessoriesGrid.innerHTML = rec.accessories.map(item => `
+        <div class="accessory-item">
+          <div class="accessory-emoji">${emojiForItem(item)}</div>
+          <div class="item-name">${item}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderCriteria() {
+      const list = document.getElementById('criteriaList');
+      list.innerHTML = temperatureCriteria.map(item => `
+        <div class="legend-chip">
+          <div class="legend-top">
+            <div class="legend-temp">${item.range}</div>
+            <div class="legend-tone">${item.tone}</div>
+          </div>
+          <div class="legend-desc"><b>${item.items.join(', ')}</b><br>${item.note}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderWeekly(daily) {
+      const scroller = document.getElementById('weekScroller');
+      const list = document.getElementById('weeklyList');
+      scroller.innerHTML = '';
+      list.innerHTML = '';
+
+      daily.time.slice(0, 6).forEach((dateStr, idx) => {
+        const date = new Date(dateStr);
+        const dayLabel = idx === 0 ? '오늘' : ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'][date.getDay()];
+        const meta = weatherCodeMeta(daily.weather_code[idx], 1);
+        const criterion = getCriterionByTemp(daily.temperature_2m_max[idx]);
+
+        const dayCard = document.createElement('div');
+        dayCard.className = 'day-card' + (idx === 0 ? ' today' : '');
+        dayCard.innerHTML = `
+          <div class="day-name">${idx === 0 ? '오늘' : dayLabel.replace('요일','')}</div>
+          <div class="day-icon">${meta.emoji}</div>
+          <div class="day-temp">${Math.round(daily.temperature_2m_max[idx])}° / ${Math.round(daily.temperature_2m_min[idx])}°</div>
+          <div class="day-sub">${criterion.items[0]} 중심</div>
+        `;
+        scroller.appendChild(dayCard);
+
+        const row = document.createElement('div');
+        row.className = 'weekly-row';
+        row.innerHTML = `
+          <div class="row-name">${dayLabel}</div>
+          <div class="row-icon">${meta.emoji}</div>
+          <div>
+            <div style="font-weight:800; margin-bottom:4px;">${criterion.items.join(' · ')}</div>
+            <div class="row-desc">${meta.label} · ${criterion.note}</div>
+          </div>
+          <div class="row-temp">${Math.round(daily.temperature_2m_max[idx])}°<br><span style="color:#7a8599; font-size:13px; font-weight:700;">${Math.round(daily.temperature_2m_min[idx])}°</span></div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function refreshUI() {
+      const { current, daily } = state.weather;
+      const meta = weatherCodeMeta(current.weather_code, current.is_day);
+      const rec = buildRecommendation(current, daily);
+      document.getElementById('locationName').textContent = state.locationName;
+      document.getElementById('currentWeatherIcon').textContent = meta.emoji;
+      document.getElementById('currentTemp').textContent = `${Math.round(current.temperature_2m)}°`;
+      document.getElementById('tempSummary').innerHTML = `최고 ${Math.round(rec.maxTemp)}° · 최저 ${Math.round(rec.minTemp)}°<br>체감 ${Math.round(rec.feelsLike)}°`;
+      document.getElementById('currentMeta').textContent = `${meta.label} · 바람 ${Math.round(current.wind_speed_10m)}km/h`;
+      status(`${state.locationName}의 오늘 최고기온 ${Math.round(rec.maxTemp)}° 기준으로 평균적인 옷차림을 추천했어요.`);
+      renderOutfit(rec);
+      renderWeekly(daily);
+      renderCriteria();
+    }
+
+    async function reverseGeocode(lat, lon) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=ko`);
+        const data = await res.json();
+        const addr = data.address || {};
+        return addr.city || addr.town || addr.county || addr.state || '현재 위치';
+      } catch (e) {
+        return '현재 위치';
+      }
+    }
+
+    async function fetchWeather(lat, lon) {
+      const url = new URL('https://api.open-meteo.com/v1/forecast');
+      url.searchParams.set('latitude', lat);
+      url.searchParams.set('longitude', lon);
+      url.searchParams.set('current', 'temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day');
+      url.searchParams.set('daily', 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max');
+      url.searchParams.set('timezone', 'auto');
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error('날씨 데이터를 불러오지 못했어요.');
+      return await res.json();
+    }
+
+    function getCurrentPosition() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error('위치 권한을 사용할 수 없어요.'));
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 8000, maximumAge: 1000 * 60 * 10 });
+      });
+    }
+
+    async function loadWeather() {
+      status('날씨를 새로 불러오는 중이에요…');
+      try {
+        let lat = 37.5665;
+        let lon = 126.9780;
+        let location = '서울';
+        try {
+          const pos = await getCurrentPosition();
+          lat = pos.coords.latitude;
+          lon = pos.coords.longitude;
+          location = await reverseGeocode(lat, lon);
+        } catch (e) {
+          console.warn('위치 조회 실패, 서울 기준으로 표시합니다.', e);
+        }
+        state.locationName = location;
+        state.weather = await fetchWeather(lat, lon);
+        refreshUI();
+      } catch (e) {
+        console.error(e);
+        status('날씨를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.');
+      }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadWeather);
+    document.querySelectorAll('input[name="sensitivity"]').forEach(input => {
+      input.checked = input.value === state.sensitivity;
+      input.addEventListener('change', () => {
+        state.sensitivity = input.value;
+        localStorage.setItem('owi-sensitivity', state.sensitivity);
+        if (state.weather) refreshUI();
+      });
+    });
+
+    const scrollArea = document.getElementById('scrollArea');
+    const pullIndicator = document.getElementById('pullIndicator');
+    let startY = 0;
+    let pulling = false;
+
+    scrollArea.addEventListener('touchstart', (e) => {
+      if (scrollArea.scrollTop <= 0) {
+        startY = e.touches[0].clientY;
+        pulling = true;
+      }
+    }, { passive: true });
+    scrollArea.addEventListener('touchmove', (e) => {
+      if (!pulling) return;
+      const diff = e.touches[0].clientY - startY;
+      if (diff > 0 && scrollArea.scrollTop <= 0) {
+        const height = Math.min(diff * 0.6, 68);
+        pullIndicator.style.height = `${height}px`;
+        pullIndicator.textContent = diff > 90 ? '손을 놓으면 새로고침' : '아래로 당겨 새로고침';
+      }
+    }, { passive: true });
+    scrollArea.addEventListener('touchend', async (e) => {
+      if (!pulling) return;
+      pulling = false;
+      const endY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : startY;
+      const diff = endY - startY;
+      if (diff > 90 && scrollArea.scrollTop <= 0) {
+        pullIndicator.style.height = '48px';
+        pullIndicator.textContent = '새로고침 중…';
+        await loadWeather();
+      }
+      setTimeout(() => pullIndicator.style.height = '0px', 250);
+    }, { passive: true });
+
+    renderCriteria();
+    loadWeather();
+  </script>
+</body>
+</html>
